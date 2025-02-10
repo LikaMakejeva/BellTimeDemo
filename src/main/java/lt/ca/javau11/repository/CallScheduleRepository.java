@@ -45,4 +45,14 @@ public interface CallScheduleRepository extends JpaRepository<CallSchedule, Long
      * @return an Optional containing the CallSchedule entity, or empty if not found.
      */
     Optional<CallSchedule> findByBreakPeriodId(Long breakId);
+
+    /**
+     * Finds all CallSchedules that are scheduled to ring at the specified time.
+     *
+     * @param callTime the exact time of the call (rounded to minutes).
+     * @return a list of CallSchedule entities that match the specified time.
+     */
+    List<CallSchedule> findByCallTime(LocalTime callTime);
+  
+	
 }
