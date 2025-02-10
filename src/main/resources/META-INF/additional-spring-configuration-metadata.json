@@ -1,0 +1,24 @@
+{
+  "properties": [
+    {
+      "name": "management.endpoint.info.enabled",
+      "type": "java.lang.String",
+      "description": "A description for 'management.endpoint.info.enabled'"
+    },
+    {
+      "name": "info.app.version",
+      "type": "java.lang.String",
+      "description": "A description for 'info.app.version'"
+    },
+    {
+      "name": "info.app.description",
+      "type": "java.lang.String",
+      "description": "A description for 'info.app.description'"
+    },
+    {
+      "name": "info.app.name",
+      "type": "java.lang.String",
+      "description": "A description for 'info.app.name'"
+    }
+  ]
+}
