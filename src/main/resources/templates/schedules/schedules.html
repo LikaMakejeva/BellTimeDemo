@@ -1,10 +1,84 @@
 <!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Insert title here</title>
-</head>
+<html xmlns:th="http://www.thymeleaf.org" 
+      th:replace="layout/base :: base(~{::body})">
 <body>
-
+    <!-- Content specific to the schedules page -->
+    <h2>Schedules List</h2>
+    <table border="1" style="width:100%; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th>Nr.</th>
+                <th>Lesson</th>
+                <th>Break</th>
+                <th>Warning</th>
+                <th>Days</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>1</td>
+                <td>Lesson (08:00 - 08:45) 45 min</td>
+                <td>Break (08:45 - 08:55) 10 min</td>
+                <td>2 min</td>
+                <td>M, T, W, T, F</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Lesson (08:55 - 09:40) 45 min</td>
+                <td>Break (09:40 - 09:55) 15 min</td>
+                <td>2 min</td>
+                <td>M, T, W, T, F</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Lesson (09:55 - 10:40) 45 min</td>
+                <td>Break (10:40 - 11:00) 20 min</td>
+                <td>2 min</td>
+                <td>M, T, W, T, F</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>Lesson (11:00 - 11:45) 45 min</td>
+                <td>Break (11:45 - 12:05) 20 min</td>
+                <td>2 min</td>
+                <td>M, T, W, T, F</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>Lesson (12:05 - 12:50) 45 min</td>
+                <td>Break (12:50 - 13:10) 20 min</td>
+                <td>2 min</td>
+                <td>M, T, W, T, F</td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td>Lesson (13:10 - 13:55) 45 min</td>
+                <td>Break (13:55 - 14:10) 15 min</td>
+                <td>2 min</td>
+                <td>M, T, W, T, F</td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td>Lesson (14:10 - 14:55) 45 min</td>
+                <td>Break (14:55 - 15:05) 10 min</td>
+                <td>2 min</td>
+                <td>M, T, W, T, F</td>
+            </tr>
+            <tr>
+                <td>8</td>
+                <td>Lesson (15:05 - 15:50) 45 min</td>
+                <td>Break (15:50 - 15:55) 5 min</td>
+                <td>2 min</td>
+                <td>M, T, W, T, F</td>
+            </tr>
+            <tr>
+                <td>9</td>
+                <td>Lesson (15:55 - 16:40) 45 min</td>
+                <td>No break</td>
+                <td>2 min</td>
+                <td>M, T, W, T, F</td>
+            </tr>
+        </tbody>
+    </table>
 </body>
 </html>

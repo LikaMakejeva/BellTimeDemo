@@ -1,17 +1,20 @@
 package lt.ca.javau11.service;
 
+import lt.ca.javau11.dto.ScheduleEventDTO;
 import lt.ca.javau11.entity.Schedule;
-import lt.ca.javau11.entity.DayOfWeek;
 import lt.ca.javau11.repository.ScheduleRepository;
 import lt.ca.javau11.exception.ResourceNotFoundException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Service for managing school schedules.
@@ -23,41 +26,30 @@ public class ScheduleService {
     private static final Logger logger = LoggerFactory.getLogger(ScheduleService.class);
     private final ScheduleRepository scheduleRepository;
 
-    /**
-     * Constructor for schedule service.
-     *
-     * @param scheduleRepository the repository for working with schedules.
-     */
     public ScheduleService(ScheduleRepository scheduleRepository) {
         this.scheduleRepository = scheduleRepository;
     }
 
     /**
-     * Retrieves a list of all schedules.
+     * Retrieves all schedules.
      *
-     * @return a list of all schedules.
+     * @return list of all schedules.
      */
     public List<Schedule> findAllSchedules() {
         logger.info("Fetching all schedules");
-        List<Schedule> schedules = scheduleRepository.findAll();
-        logger.info("Found {} schedules", schedules.size());
-        return schedules;
+        return scheduleRepository.findAll();
     }
 
     /**
      * Finds a schedule by its ID.
      *
-     * @param id the ID of the schedule.
+     * @param id Schedule ID.
      * @return the found schedule.
-     * @throws ResourceNotFoundException if no schedule is found with the given ID.
+     * @throws ResourceNotFoundException if not found.
      */
     public Schedule findScheduleById(Long id) {
-        logger.info("Fetching schedule with ID: {}", id);
         return scheduleRepository.findById(id)
-                .orElseThrow(() -> {
-                    logger.error("Schedule with ID {} not found", id);
-                    return new ResourceNotFoundException("Schedule not found with ID: " + id);
-                });
+                .orElseThrow(() -> new ResourceNotFoundException("Schedule not found with ID: " + id));
     }
 
     /**
@@ -65,29 +57,22 @@ public class ScheduleService {
      *
      * @param effectiveDate the effective date.
      * @return the found schedule.
-     * @throws ResourceNotFoundException if no schedule is found for the given date.
+     * @throws ResourceNotFoundException if not found.
      */
     public Schedule getScheduleForDate(LocalDate effectiveDate) {
-        logger.info("Fetching schedule for date: {}", effectiveDate);
         return scheduleRepository.findByEffectiveDate(effectiveDate)
-                .orElseThrow(() -> {
-                    logger.error("Schedule not found for date: {}", effectiveDate);
-                    return new ResourceNotFoundException("Schedule not found for date: " + effectiveDate);
-                });
+                .orElseThrow(() -> new ResourceNotFoundException("Schedule not found for date: " + effectiveDate));
     }
 
     /**
      * Retrieves all schedules within a specified date range.
      *
-     * @param startDate the start date (inclusive).
-     * @param endDate   the end date (inclusive).
-     * @return a list of schedules in the specified range.
+     * @param startDate start date (inclusive).
+     * @param endDate   end date (inclusive).
+     * @return list of schedules.
      */
     public List<Schedule> getSchedulesByDateRange(LocalDate startDate, LocalDate endDate) {
-        logger.info("Fetching schedules from {} to {}", startDate, endDate);
-        List<Schedule> schedules = scheduleRepository.findByEffectiveDateBetween(startDate, endDate);
-        logger.info("Found {} schedules in range", schedules.size());
-        return schedules;
+        return scheduleRepository.findByEffectiveDateBetween(startDate, endDate);
     }
 
     /**
@@ -96,54 +81,32 @@ public class ScheduleService {
      * @param dayOfWeek the day of the week.
      * @return true if an active schedule exists, false otherwise.
      */
-    public boolean hasActiveSchedule(DayOfWeek dayOfWeek) {
-        logger.info("Checking for active schedule for day: {}", dayOfWeek);
-        Optional<Schedule> activeSchedule = scheduleRepository.findByDayOfWeekAndActiveTrue(dayOfWeek);
-        logger.debug("Active schedule for {}: {}", dayOfWeek, activeSchedule.isPresent() ? "found" : "not found");
-        return activeSchedule.isPresent();
+    public boolean hasActiveSchedule(java.time.DayOfWeek dayOfWeek) {
+        return scheduleRepository.findByDayOfWeekAndActiveTrue(dayOfWeek).isPresent();
     }
 
     /**
      * Creates a new schedule.
-     * The schedule must not have an existing ID.
      *
      * @param schedule the schedule to create.
      * @return the created schedule.
-     * @throws IllegalArgumentException if the schedule is null or has an ID.
      */
     public Schedule saveSchedule(Schedule schedule) {
-        logger.info("Saving new schedule");
-        if (schedule == null) {
-            logger.error("Received null schedule data");
-            throw new IllegalArgumentException("Schedule data cannot be null");
-        }
-        if (schedule.getId() != null) {
-            logger.error("Attempt to create schedule with existing ID: {}", schedule.getId());
-            throw new IllegalArgumentException("New schedule should not have an ID");
-        }
         validateSchedule(schedule);
-        Schedule savedSchedule = scheduleRepository.save(schedule);
-        logger.info("Schedule successfully saved with ID: {}", savedSchedule.getId());
-        return savedSchedule;
+        return scheduleRepository.save(schedule);
     }
 
     /**
      * Updates an existing schedule.
      *
-     * @param id the ID of the schedule to update.
-     * @param scheduleDetails the schedule data to update.
+     * @param id Schedule ID.
+     * @param scheduleDetails Schedule data to update.
      * @return the updated schedule.
-     * @throws ResourceNotFoundException if no schedule exists with the given ID.
-     * @throws IllegalArgumentException if the provided schedule data is invalid.
+     * @throws ResourceNotFoundException if schedule is not found.
      */
     public Schedule updateSchedule(Long id, Schedule scheduleDetails) {
-        logger.info("Updating schedule with ID: {}", id);
-        if (scheduleDetails == null) {
-            logger.error("Received null data for schedule update");
-            throw new IllegalArgumentException("Schedule data cannot be null");
-        }
         Schedule existingSchedule = findScheduleById(id);
-        // Update fields as needed – пример обновления основных полей
+        
         existingSchedule.setDayOfWeek(scheduleDetails.getDayOfWeek());
         existingSchedule.setScheduleType(scheduleDetails.getScheduleType());
         existingSchedule.setLessonDuration(scheduleDetails.getLessonDuration());
@@ -151,35 +114,74 @@ public class ScheduleService {
         existingSchedule.setFirstLessonStart(scheduleDetails.getFirstLessonStart());
         existingSchedule.setActive(scheduleDetails.isActive());
         existingSchedule.setEffectiveDate(scheduleDetails.getEffectiveDate());
-        existingSchedule.setConsiderDaylightSaving(scheduleDetails.getConsiderDaylightSaving());
-        // SpecialSchedules and Lessons can be updated separately if needed
+
         validateSchedule(existingSchedule);
-        Schedule updatedSchedule = scheduleRepository.save(existingSchedule);
-        logger.info("Schedule with ID {} successfully updated", id);
-        return updatedSchedule;
+        return scheduleRepository.save(existingSchedule);
     }
 
     /**
      * Deletes a schedule by its ID.
      *
-     * @param id the ID of the schedule to delete.
-     * @throws ResourceNotFoundException if no schedule exists with the given ID.
+     * @param id Schedule ID.
+     * @throws ResourceNotFoundException if schedule is not found.
      */
     public void deleteSchedule(Long id) {
-        logger.info("Deleting schedule with ID: {}", id);
         if (!scheduleRepository.existsById(id)) {
-            logger.error("Schedule with ID {} not found for deletion", id);
-            throw new ResourceNotFoundException("Schedule not found with id: " + id);
+            throw new ResourceNotFoundException("Schedule not found with ID: " + id);
         }
         scheduleRepository.deleteById(id);
-        logger.info("Schedule with ID {} successfully deleted", id);
+    }
+
+    /**
+     * Retrieves all schedules in a date range and converts them into ScheduleEventDTOs.
+     *
+     * @param startDate start date (inclusive).
+     * @param endDate   end date (inclusive).
+     * @return a list of ScheduleEventDTO representing lessons and breaks.
+     */
+    public List<ScheduleEventDTO> getEventsForDateRange(LocalDate startDate, LocalDate endDate) {
+        logger.info("Fetching schedule events between {} and {}", startDate, endDate);
+
+        return scheduleRepository.findByEffectiveDateBetween(startDate, endDate)
+                .stream()
+                .flatMap(schedule -> {
+                    LocalDate effectiveDate = schedule.getEffectiveDate();
+                    List<ScheduleEventDTO> events = new ArrayList<>();
+
+                    // Process lessons
+                    schedule.getLessons().forEach(lesson -> events.add(
+                            new ScheduleEventDTO(
+                                    lesson.getId(),
+                                    lesson.getSubjectEn(),
+                                    LocalDateTime.of(effectiveDate, lesson.getStartTime()),
+                                    LocalDateTime.of(effectiveDate, lesson.getStartTime().plusMinutes(lesson.getDuration())),
+                                    "#3788d8",
+                                    false
+                            )
+                    ));
+
+                    // Process breaks (FIX: plusMinutes now correctly uses long)
+                    schedule.getBreaks().forEach(breakTime -> events.add(
+                            new ScheduleEventDTO(
+                                    breakTime.getId(),
+                                    "Перемена",
+                                    LocalDateTime.of(effectiveDate, breakTime.getStartTime()),
+                                    LocalDateTime.of(effectiveDate, breakTime.getStartTime().plusMinutes(breakTime.getDuration().toMinutes())), // 🔥 FIXED!
+                                    "#28a745",
+                                    false
+                            )
+                    ));
+
+                    return events.stream();
+                })
+                .collect(Collectors.toList());
     }
 
     /**
      * Validates the schedule data.
      *
-     * @param schedule the schedule to validate.
-     * @throws IllegalArgumentException if any required fields are missing or invalid.
+     * @param schedule Schedule to validate.
+     * @throws IllegalArgumentException if required fields are missing or invalid.
      */
     private void validateSchedule(Schedule schedule) {
         if (schedule.getDayOfWeek() == null) {

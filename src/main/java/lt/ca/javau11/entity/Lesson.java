@@ -7,14 +7,17 @@ import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalTime;
+import java.util.Optional;
+
 /**
  * Entity representing a lesson in the school schedule.
  * Contains information about the lesson order, duration, subject, and related schedules.
  */
 @Entity
 @Table(name = "lessons", indexes = {
-    @Index(name = "idx_lesson_schedule", columnList = "schedule_id"),
-    @Index(name = "idx_lesson_order", columnList = "order_number, schedule_id", unique = true)
+        @Index(name = "idx_lesson_schedule", columnList = "schedule_id"),
+        @Index(name = "idx_lesson_order", columnList = "order_number, schedule_id", unique = true)
 })
 public class Lesson {
     private static final Logger log = LoggerFactory.getLogger(Lesson.class);
@@ -75,11 +78,11 @@ public class Lesson {
      */
     public Lesson(int orderNumber, String subjectEn, Schedule schedule) {
         this.setOrderNumber(orderNumber);
-        this.setSubject(subjectEn);
+        this.setSubjectEn(subjectEn);
         this.setSchedule(schedule);
     }
 
-    // Getters
+    // ✅ Getters
 
     /**
      * Gets the lesson ID.
@@ -135,15 +138,20 @@ public class Lesson {
     public String getSubjectEn() {
         return subjectEn;
     }
-
-    // Setters with validation and logging
-
     /**
-     * Sets the order number of the lesson.
-     *
-     * @param orderNumber the order number to set.
-     * @throws IllegalArgumentException if orderNumber is less than 1.
+     * 🔥 **Добавленный метод**: Получение времени начала урока
+     * @return start time of the lesson.
+     * @throws IllegalStateException if the schedule is missing.
      */
+    public LocalTime getStartTime() {
+        if (schedule == null || schedule.getFirstLessonStart() == null) {
+            log.warn("Schedule or first lesson start time is missing for lesson ID {}", id);
+            throw new IllegalStateException("Cannot determine start time: schedule is missing");
+        }
+        return schedule.getFirstLessonStart().plusMinutes((long) (orderNumber - 1) * schedule.getLessonDuration());
+    }
+    // ✅ Setters
+
     public void setOrderNumber(int orderNumber) {
         if (orderNumber < 1) {
             log.error("Attempt to set invalid order number: {}", orderNumber);
@@ -153,12 +161,6 @@ public class Lesson {
         this.orderNumber = orderNumber;
     }
 
-    /**
-     * Sets the associated schedule.
-     *
-     * @param schedule the schedule to set.
-     * @throws IllegalArgumentException if schedule is null.
-     */
     public void setSchedule(Schedule schedule) {
         if (schedule == null) {
             log.error("Attempt to set null schedule");
@@ -168,12 +170,6 @@ public class Lesson {
         this.schedule = schedule;
     }
 
-    /**
-     * Sets the duration of the lesson.
-     *
-     * @param duration the duration in minutes to set.
-     * @throws IllegalArgumentException if duration is less than 1.
-     */
     public void setDuration(int duration) {
         if (duration < 1) {
             log.error("Attempt to set invalid duration: {}", duration);
@@ -183,13 +179,7 @@ public class Lesson {
         this.duration = duration;
     }
 
-    /**
-     * Sets the subject name in English.
-     *
-     * @param subject the subject name to set.
-     * @throws IllegalArgumentException if subject is null or empty.
-     */
-    public void setSubject(String subject) {
+    public void setSubjectEn(String subject) {
         if (subject == null || subject.trim().isEmpty()) {
             log.error("Attempt to set invalid subject name");
             throw new IllegalArgumentException("Subject name cannot be empty");
@@ -198,11 +188,6 @@ public class Lesson {
         this.subjectEn = subject.trim();
     }
 
-    /**
-     * Validates the entity before saving or updating.
-     *
-     * @throws IllegalArgumentException if required fields are missing.
-     */
     @PrePersist
     @PreUpdate
     protected void validateBeforeSave() {
@@ -218,23 +203,12 @@ public class Lesson {
         log.debug("Lesson validation passed before save");
     }
 
-    /**
-     * Returns a string representation of the lesson.
-     *
-     * @return a string representing the lesson.
-     */
     @Override
     public String toString() {
         return String.format("Lesson{id=%d, orderNumber=%d, scheduleId=%s, duration=%d, subject='%s'}",
-                id, orderNumber, schedule != null ? schedule.getId() : "null", getDuration(), subjectEn);
+                id, orderNumber, Optional.ofNullable(schedule).map(Schedule::getId).orElse(null), getDuration(), subjectEn);
     }
 
-    /**
-     * Compares this lesson with another for equality.
-     *
-     * @param o the object to compare with.
-     * @return true if the lessons are equal, false otherwise.
-     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -243,11 +217,6 @@ public class Lesson {
         return id != null && id.equals(lesson.id);
     }
 
-    /**
-     * Generates a hash code for the lesson.
-     *
-     * @return the hash code.
-     */
     @Override
     public int hashCode() {
         return id != null ? id.hashCode() : 0;

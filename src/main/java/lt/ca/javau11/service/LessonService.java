@@ -5,7 +5,7 @@ import lt.ca.javau11.repository.LessonRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -82,14 +82,18 @@ public class LessonService {
         Optional<Lesson> optionalLesson = lessonRepository.findById(id);
         if (optionalLesson.isPresent()) {
             Lesson existingLesson = optionalLesson.get();
+            
+            // 🔥 **Исправлено: заменено setSubject() на setSubjectEn()**
             if (lessonDetails.getSubjectEn() != null) {
-                existingLesson.setSubject(lessonDetails.getSubjectEn());
+                existingLesson.setSubjectEn(lessonDetails.getSubjectEn());
             }
             if (lessonDetails.getSchedule() != null) {
                 existingLesson.setSchedule(lessonDetails.getSchedule());
             }
-            // Update additional fields if needed.
-            log.info("Saving updated lesson with ID: {}", id);
+            
+            // 🔥 **Добавлен логер перед возвратом обновленного объекта**
+            log.info("Saving updated lesson with ID: {}, Subject: {}", id, existingLesson.getSubjectEn());
+            
             return lessonRepository.save(existingLesson);
         }
         log.warn("Lesson with ID {} not found for update", id);

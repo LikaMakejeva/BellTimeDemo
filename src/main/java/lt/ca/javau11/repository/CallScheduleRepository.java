@@ -14,45 +14,43 @@ import java.util.Optional;
 public interface CallScheduleRepository extends JpaRepository<CallSchedule, Long> {
 
     /**
-     * Finds all CallSchedules by the specified call type.
+     * Finds all CallSchedule entities by the specified call type.
      *
      * @param callType the type of the call (e.g. lesson start, break, etc.).
-     * @return a list of CallSchedule entities that match the call type.
+     * @return a list of CallSchedule entities that match the specified call type.
      */
     List<CallSchedule> findByCallType(CallType callType);
 
     /**
-     * Finds all CallSchedules where the call time is between the specified start and end time.
+     * Finds all CallSchedule entities where the call time is between the specified start and end times.
      *
      * @param startTime the starting time of the period.
      * @param endTime the ending time of the period.
-     * @return a list of CallSchedule entities that match the time range.
+     * @return a list of CallSchedule entities that fall within the specified time range.
      */
     List<CallSchedule> findByCallTimeBetween(LocalTime startTime, LocalTime endTime);
 
     /**
-     * Finds a CallSchedule by the associated lesson ID.
+     * Finds a CallSchedule entity by the associated lesson ID.
      *
      * @param lessonId the ID of the lesson.
-     * @return an Optional containing the CallSchedule entity, or empty if not found.
+     * @return an Optional containing the found CallSchedule, or empty if not found.
      */
     Optional<CallSchedule> findByLessonId(Long lessonId);
 
     /**
-     * Finds a CallSchedule by the associated break period ID.
+     * Finds a CallSchedule entity by the associated break period ID.
      *
      * @param breakId the ID of the break period.
-     * @return an Optional containing the CallSchedule entity, or empty if not found.
+     * @return an Optional containing the found CallSchedule, or empty if not found.
      */
     Optional<CallSchedule> findByBreakPeriodId(Long breakId);
 
     /**
-     * Finds all CallSchedules that are scheduled to ring at the specified time.
+     * Finds all CallSchedule entities that are scheduled to ring at the specified time.
      *
      * @param callTime the exact time of the call (rounded to minutes).
-     * @return a list of CallSchedule entities that match the specified time.
+     * @return a list of CallSchedule entities matching the specified time.
      */
     List<CallSchedule> findByCallTime(LocalTime callTime);
-  
-	
 }

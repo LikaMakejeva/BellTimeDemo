@@ -1,7 +1,8 @@
 package lt.ca.javau11.controller;
 
+
+import lt.ca.javau11.dto.ScheduleEventDTO;
 import lt.ca.javau11.entity.Schedule;
-import lt.ca.javau11.entity.DayOfWeek;
 import lt.ca.javau11.service.ScheduleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,12 +11,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 
 /**
  * REST controller for managing school schedules.
- * Provides endpoints for CRUD operations on schedules.
+ * Provides endpoints for CRUD operations and calendar integration.
  */
 @RestController
 @RequestMapping("/api/schedules")
@@ -41,7 +43,6 @@ public class ScheduleController {
     public ResponseEntity<List<Schedule>> getAllSchedules() {
         logger.info("Request to get all schedules");
         List<Schedule> schedules = scheduleService.findAllSchedules();
-        logger.info("Found {} schedules", schedules.size());
         return ResponseEntity.ok(schedules);
     }
 
@@ -95,9 +96,13 @@ public class ScheduleController {
      * @return ResponseEntity containing true if an active schedule exists, false otherwise.
      */
     @GetMapping("/active/{dayOfWeek}")
-    public ResponseEntity<Boolean> checkActiveSchedule(@PathVariable DayOfWeek dayOfWeek) {
+    public ResponseEntity<Boolean> checkActiveSchedule(@PathVariable lt.ca.javau11.entity.DayOfWeek dayOfWeek) {
         logger.info("Request to check active schedule for weekday: {}", dayOfWeek);
-        boolean hasActiveSchedule = scheduleService.hasActiveSchedule(dayOfWeek);
+
+       
+        DayOfWeek standardDayOfWeek = DayOfWeek.valueOf(dayOfWeek.name());
+
+        boolean hasActiveSchedule = scheduleService.hasActiveSchedule(standardDayOfWeek);
         return ResponseEntity.ok(hasActiveSchedule);
     }
 
@@ -139,5 +144,22 @@ public class ScheduleController {
         logger.info("Request to delete schedule with ID: {}", id);
         scheduleService.deleteSchedule(id);
         return ResponseEntity.noContent().build();
+    }
+
+   
+    /**
+     * Retrieves all events for a given date range in a format suitable for a calendar UI.
+     *
+     * @param startDate start date (inclusive).
+     * @param endDate   end date (inclusive).
+     * @return list of events formatted for calendar display.
+     */
+    @GetMapping("/calendar/events")
+    public ResponseEntity<List<ScheduleEventDTO>> getCalendarEvents(
+            @RequestParam("start") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam("end") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        logger.info("Fetching calendar events between {} and {}", startDate, endDate);
+        List<ScheduleEventDTO> events = scheduleService.getEventsForDateRange(startDate, endDate);
+        return ResponseEntity.ok(events);
     }
 }

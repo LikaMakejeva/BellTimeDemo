@@ -1,7 +1,8 @@
 package lt.ca.javau11.repository;
 
+
 import lt.ca.javau11.entity.Schedule;
-import lt.ca.javau11.entity.DayOfWeek;
+import java.time.DayOfWeek;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDate;
 import java.util.List;
