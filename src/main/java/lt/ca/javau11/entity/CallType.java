@@ -13,10 +13,11 @@ public enum CallType {
     /**
      * Signal for break time
      */
-    BREAK,           
+    BREAK_START,
+   
 
     /**
      * Preliminary signal before lesson start (warning bell)
      */
-    PRELIMINARY_CALL  
+    PRELIMINARY_CALL; 
 }

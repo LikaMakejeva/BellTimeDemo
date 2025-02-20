@@ -1,34 +1,39 @@
 package lt.ca.javau11.controller;
 
-
-import lt.ca.javau11.dto.ScheduleEventDTO;
+import jakarta.validation.Valid;
 import lt.ca.javau11.entity.Schedule;
 import lt.ca.javau11.service.ScheduleService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 
 /**
- * REST controller for managing school schedules.
- * Provides endpoints for CRUD operations and calendar integration.
+ * REST Controller for managing schedules.
+ * This controller provides endpoints for retrieving, creating, updating, and deleting schedules.
+ * It supports both standard and custom schedules.
+ * 
+ * @author Lika Makejeva
+ * @version 1.0
+ * @since 1.0
  */
 @RestController
 @RequestMapping("/api/schedules")
+@Validated
 public class ScheduleController {
+
     private static final Logger logger = LoggerFactory.getLogger(ScheduleController.class);
     private final ScheduleService scheduleService;
 
     /**
      * Constructor for dependency injection.
      *
-     * @param scheduleService the service for schedule operations.
+     * @param scheduleService The service responsible for schedule operations.
      */
     public ScheduleController(ScheduleService scheduleService) {
         this.scheduleService = scheduleService;
@@ -37,129 +42,133 @@ public class ScheduleController {
     /**
      * Retrieves all schedules.
      *
-     * @return ResponseEntity containing a list of all schedules.
+     * @return List of all schedules.
      */
     @GetMapping
     public ResponseEntity<List<Schedule>> getAllSchedules() {
-        logger.info("Request to get all schedules");
-        List<Schedule> schedules = scheduleService.findAllSchedules();
-        return ResponseEntity.ok(schedules);
+        logger.info("Fetching all schedules");
+        return ResponseEntity.ok(scheduleService.findAllSchedules());
     }
 
     /**
      * Retrieves a schedule by its ID.
      *
-     * @param id the ID of the schedule.
-     * @return ResponseEntity containing the schedule.
+     * @param id The schedule ID.
+     * @return The found schedule.
      */
     @GetMapping("/{id}")
     public ResponseEntity<Schedule> getScheduleById(@PathVariable Long id) {
-        logger.info("Request to get schedule with ID: {}", id);
-        Schedule schedule = scheduleService.findScheduleById(id);
-        return ResponseEntity.ok(schedule);
+        logger.info("Fetching schedule with ID: {}", id);
+        return ResponseEntity.ok(scheduleService.findScheduleById(id));
     }
 
     /**
-     * Retrieves a schedule effective on a specific date.
+     * Retrieves a schedule for a specific date.
      *
-     * @param date the effective date in ISO format.
-     * @return ResponseEntity containing the schedule for the given date.
+     * @param date The date to search for a schedule.
+     * @return The corresponding schedule.
      */
     @GetMapping("/date/{date}")
-    public ResponseEntity<Schedule> getScheduleForDate(
-            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        logger.info("Request to get schedule for date: {}", date);
-        Schedule schedule = scheduleService.getScheduleForDate(date);
-        return ResponseEntity.ok(schedule);
+    public ResponseEntity<Schedule> getScheduleByDate(@PathVariable LocalDate date) {
+        logger.info("Fetching schedule for date: {}", date);
+        return ResponseEntity.ok(scheduleService.getScheduleForDate(date));
     }
 
     /**
-     * Retrieves schedules within a specified date range.
+     * Retrieves schedules within a specific date range.
      *
-     * @param start the start date (inclusive).
-     * @param end   the end date (inclusive).
-     * @return ResponseEntity containing a list of schedules in the date range.
+     * @param start The start date of the range.
+     * @param end   The end date of the range.
+     * @return List of schedules within the range.
      */
-    @GetMapping("/range")
+    @GetMapping("/date-range")
     public ResponseEntity<List<Schedule>> getSchedulesByDateRange(
-            @RequestParam("start") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
-            @RequestParam("end") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
-        logger.info("Request to get schedules from {} to {}", start, end);
-        List<Schedule> schedules = scheduleService.getSchedulesByDateRange(start, end);
-        return ResponseEntity.ok(schedules);
-    }
-
-    /**
-     * Checks for an active schedule on a specific day of the week.
-     *
-     * @param dayOfWeek the day of the week.
-     * @return ResponseEntity containing true if an active schedule exists, false otherwise.
-     */
-    @GetMapping("/active/{dayOfWeek}")
-    public ResponseEntity<Boolean> checkActiveSchedule(@PathVariable lt.ca.javau11.entity.DayOfWeek dayOfWeek) {
-        logger.info("Request to check active schedule for weekday: {}", dayOfWeek);
-
-       
-        DayOfWeek standardDayOfWeek = DayOfWeek.valueOf(dayOfWeek.name());
-
-        boolean hasActiveSchedule = scheduleService.hasActiveSchedule(standardDayOfWeek);
-        return ResponseEntity.ok(hasActiveSchedule);
+            @RequestParam LocalDate start,
+            @RequestParam LocalDate end) {
+        logger.info("Fetching schedules between {} and {}", start, end);
+        return ResponseEntity.ok(scheduleService.getSchedulesByDateRange(start, end));
     }
 
     /**
      * Creates a new schedule.
      *
-     * @param schedule the schedule to create.
-     * @return ResponseEntity containing the created schedule.
+     * @param schedule The schedule to create.
+     * @return The created schedule.
      */
     @PostMapping
-    public ResponseEntity<Schedule> createSchedule(@RequestBody Schedule schedule) {
-        logger.info("Request to create a new schedule");
-        Schedule createdSchedule = scheduleService.saveSchedule(schedule);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdSchedule);
+    public ResponseEntity<?> createSchedule(@Valid @RequestBody Schedule schedule) {
+        logger.info("Creating new schedule: {}", schedule);
+        try {
+            Schedule createdSchedule = scheduleService.createSchedule(schedule);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdSchedule);
+        } catch (Exception e) {
+            logger.error("Error creating schedule: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 
     /**
      * Updates an existing schedule.
      *
-     * @param id              the ID of the schedule to update.
-     * @param scheduleDetails the updated schedule data.
-     * @return ResponseEntity containing the updated schedule.
+     * @param id       The ID of the schedule to update.
+     * @param schedule The updated schedule data.
+     * @return The updated schedule.
      */
     @PutMapping("/{id}")
-    public ResponseEntity<Schedule> updateSchedule(@PathVariable Long id, @RequestBody Schedule scheduleDetails) {
-        logger.info("Request to update schedule with ID: {}", id);
-        Schedule updatedSchedule = scheduleService.updateSchedule(id, scheduleDetails);
-        return ResponseEntity.ok(updatedSchedule);
+    public ResponseEntity<Schedule> updateSchedule(@PathVariable Long id, @Valid @RequestBody Schedule schedule) {
+        logger.info("Updating schedule with ID: {}", id);
+        return ResponseEntity.ok(scheduleService.updateSchedule(id, schedule));
     }
 
     /**
      * Deletes a schedule by its ID.
      *
-     * @param id the ID of the schedule to delete.
-     * @return ResponseEntity with HTTP status NO_CONTENT if deletion is successful.
+     * @param id The ID of the schedule to delete.
+     * @return HTTP 204 No Content response if successful.
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteSchedule(@PathVariable Long id) {
-        logger.info("Request to delete schedule with ID: {}", id);
+        logger.info("Deleting schedule with ID: {}", id);
         scheduleService.deleteSchedule(id);
         return ResponseEntity.noContent().build();
     }
 
-   
     /**
-     * Retrieves all events for a given date range in a format suitable for a calendar UI.
+     * Retrieves all regular schedules.
      *
-     * @param startDate start date (inclusive).
-     * @param endDate   end date (inclusive).
-     * @return list of events formatted for calendar display.
+     * @return List of regular schedules.
      */
-    @GetMapping("/calendar/events")
-    public ResponseEntity<List<ScheduleEventDTO>> getCalendarEvents(
-            @RequestParam("start") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam("end") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        logger.info("Fetching calendar events between {} and {}", startDate, endDate);
-        List<ScheduleEventDTO> events = scheduleService.getEventsForDateRange(startDate, endDate);
-        return ResponseEntity.ok(events);
+    @GetMapping("/regular")
+    public ResponseEntity<List<Schedule>> getRegularSchedules() {
+        logger.info("Fetching all regular schedules");
+        return ResponseEntity.ok(scheduleService.getRegularSchedules());
+    }
+
+    /**
+     * Retrieves all special schedules.
+     *
+     * @return List of special schedules.
+     */
+    @GetMapping("/special")
+    public ResponseEntity<List<Schedule>> getSpecialSchedules() {
+        logger.info("Fetching all special schedules");
+        return ResponseEntity.ok(scheduleService.getSpecialSchedules());
+    }
+
+    /**
+     * Saves a corrected version of a schedule as a special schedule.
+     *
+     * @param baseScheduleId The ID of the base schedule.
+     * @param schedule       The modified schedule details.
+     * @param customName     The custom name for the new schedule.
+     * @return The newly saved special schedule.
+     */
+    @PostMapping("/save-corrected/{baseScheduleId}")
+    public ResponseEntity<Schedule> saveCorrectedSchedule(
+            @PathVariable Long baseScheduleId,
+            @Valid @RequestBody Schedule schedule,
+            @RequestParam String customName) {
+        logger.info("Saving corrected schedule based on template {} with name '{}'", baseScheduleId, customName);
+        return ResponseEntity.ok(scheduleService.saveCorrectedSchedule(baseScheduleId, schedule, customName));
     }
 }

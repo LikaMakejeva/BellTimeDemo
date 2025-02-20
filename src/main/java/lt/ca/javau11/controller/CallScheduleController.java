@@ -3,128 +3,145 @@ package lt.ca.javau11.controller;
 import lt.ca.javau11.entity.CallSchedule;
 import lt.ca.javau11.entity.CallType;
 import lt.ca.javau11.service.CallScheduleService;
-import lt.ca.javau11.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
-import java.util.List;
-import java.util.stream.Collectors;
-import org.springframework.validation.ObjectError;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+
+/**
+ * REST controller for managing school bell schedules.
+ * Provides endpoints for CRUD operations and queries related to CallSchedule entities.
+ */
 @RestController
 @RequestMapping("/api/call-schedules")
-@Validated  // Ensure validation of input request body
+@Validated
 public class CallScheduleController {
 
     private static final Logger log = LoggerFactory.getLogger(CallScheduleController.class);
     private final CallScheduleService callScheduleService;
 
-    // Constructor for dependency injection
     public CallScheduleController(CallScheduleService callScheduleService) {
         this.callScheduleService = callScheduleService;
     }
 
     /**
-     * Get all call schedules.
+     * GET /api/call-schedules : Retrieve all call schedules.
      *
-     * @return list of all call schedules.
+     * @return ResponseEntity containing a list of all call schedules
      */
     @GetMapping
-    public List<CallSchedule> getAllCallSchedules() {
+    public ResponseEntity<List<CallSchedule>> getAllCallSchedules() {
         log.info("Fetching all call schedules");
-        return callScheduleService.findAll();
+        List<CallSchedule> schedules = callScheduleService.getAllCallSchedules();
+        return schedules.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(schedules);
     }
 
     /**
-     * Create a new call schedule.
+     * GET /api/call-schedules/{id} : Retrieve a call schedule by ID.
      *
-     * @param callSchedule the new call schedule to be created.
-     * @return the saved call schedule.
-     */
-    @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public CallSchedule createCallSchedule(@Valid @RequestBody CallSchedule callSchedule) {
-        log.info("Creating new call schedule: {}", callSchedule);
-        return callScheduleService.save(callSchedule);
-    }
-
-    /**
-     * Get a call schedule by ID.
-     *
-     * @param id the ID of the call schedule.
-     * @return the found call schedule.
-     * @throws ResourceNotFoundException if the call schedule is not found.
+     * @param id the ID of the call schedule
+     * @return ResponseEntity containing the call schedule, or 404 if not found
      */
     @GetMapping("/{id}")
-    public CallSchedule getCallScheduleById(@PathVariable Long id) {
+    public ResponseEntity<CallSchedule> getCallScheduleById(@PathVariable Long id) {
         log.info("Fetching call schedule with ID: {}", id);
-        // The service method already throws an exception if not found.
-        return callScheduleService.findById(id);
+        try {
+            CallSchedule schedule = callScheduleService.getCallScheduleById(id);
+            return ResponseEntity.ok(schedule);
+        } catch (IllegalArgumentException e) {
+            log.warn("Call schedule not found with ID: {}", id);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+
+    /**
+     * POST /api/call-schedules : Create a new call schedule.
+     *
+     * @param callSchedule the call schedule to be created
+     * @return ResponseEntity containing the created call schedule
+     */
+    @PostMapping
+    public ResponseEntity<CallSchedule> saveCallSchedule(@Valid @RequestBody CallSchedule callSchedule) {
+        log.info("Saving new call schedule: {}", callSchedule);
+        CallSchedule savedSchedule = callScheduleService.saveCallSchedule(callSchedule);
+        return ResponseEntity.ok().body(savedSchedule);
     }
 
     /**
-     * Delete a call schedule by ID.
+     * DELETE /api/call-schedules/{id} : Delete a call schedule by ID.
      *
-     * @param id the ID of the call schedule to be deleted.
-     * @throws ResourceNotFoundException if the call schedule is not found.
+     * @param id the ID of the call schedule
+     * @return ResponseEntity with status 204 if deleted successfully, or 404 if not found
      */
     @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteCallSchedule(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteCallSchedule(@PathVariable Long id) {
         log.info("Deleting call schedule with ID: {}", id);
-        if (!callScheduleService.existsById(id)) {
-            log.warn("Call schedule with ID: {} not found", id);
-            throw new ResourceNotFoundException("Call schedule not found with ID: " + id);
-        }
-        callScheduleService.delete(id);
-        log.info("Call schedule with ID: {} successfully deleted", id);
+        boolean deleted = callScheduleService.deleteCallScheduleById(id);
+        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
     }
 
     /**
-     * Get call schedules by call type.
+     * GET /api/call-schedules/type/{callType} : Retrieve call schedules by type.
      *
-     * @param callType the type of the call schedules to retrieve.
-     * @return list of call schedules matching the given type.
+     * @param callType the type of call schedules to retrieve
+     * @return ResponseEntity containing the list of matching call schedules
      */
     @GetMapping("/type/{callType}")
-    public List<CallSchedule> getCallSchedulesByType(@PathVariable CallType callType) {
-        log.info("Fetching call schedules by type: {}", callType);
-        return callScheduleService.findByCallType(callType);
+    public ResponseEntity<List<CallSchedule>> getCallSchedulesByType(@PathVariable CallType callType) {
+        log.info("Fetching call schedules of type: {}", callType);
+        List<CallSchedule> schedules = callScheduleService.findAllByCallType(callType);
+        return schedules.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(schedules);
     }
 
     /**
-     * Handle validation errors (constraint violations).
+     * GET /api/call-schedules/time-range : Retrieve call schedules within a time range.
      *
-     * @param ex the exception containing validation errors.
-     * @return a response entity with error messages.
+     * @param start start time of the range
+     * @param end   end time of the range
+     * @return ResponseEntity containing the list of call schedules within the range
      */
-    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
-    public ResponseEntity<Object> handleValidationExceptions(jakarta.validation.ConstraintViolationException ex) {
-        // Collect error messages from constraint violations.
-        List<String> errors = ex.getConstraintViolations().stream()
-                .map(violation -> violation.getMessage())
-                .collect(Collectors.toList());
-        log.warn("Validation error: {}", errors);
-        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    @GetMapping("/time-range")
+    public ResponseEntity<List<CallSchedule>> getCallSchedulesByTimeRange(
+            @RequestParam LocalTime start,
+            @RequestParam LocalTime end) {
+        log.info("Fetching call schedules between {} and {}", start, end);
+        List<CallSchedule> schedules = callScheduleService.findAllByTimeRange(start, end);
+        return schedules.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(schedules);
     }
 
     /**
-     * Handle method argument validation errors.
+     * GET /api/call-schedules/break/{breakId} : Retrieve call schedules for a break.
      *
-     * @param ex the exception containing argument validation errors.
-     * @return a response entity with error messages.
+     * @param breakId the ID of the break
+     * @return ResponseEntity containing the list of call schedules, or 404 if none found
      */
-    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
-    public ResponseEntity<Object> handleMethodArgumentNotValidException(org.springframework.web.bind.MethodArgumentNotValidException ex) {
-        List<String> errors = ex.getBindingResult().getAllErrors().stream()
-                .map(ObjectError::getDefaultMessage)
-                .collect(Collectors.toList());
-        log.warn("Method argument validation error: {}", errors);
-        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    @GetMapping("/break/{breakId}")
+    public ResponseEntity<List<CallSchedule>> getCallSchedulesByBreak(@PathVariable Long breakId) {
+        log.info("Fetching call schedules for break ID: {}", breakId);
+        List<CallSchedule> schedules = callScheduleService.findAllByBreak(breakId);
+        return schedules.isEmpty() ? ResponseEntity.notFound().build() : ResponseEntity.ok().body(schedules);
+    }
+
+    /**
+     * GET /api/call-schedules/date/{date} : Retrieve call schedules for a specific date.
+     *
+     * @param date the date to retrieve schedules for
+     * @return ResponseEntity containing the list of call schedules for the specified date
+     */
+    @GetMapping("/date/{date}")
+    public ResponseEntity<List<CallSchedule>> getCallSchedulesForDate(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        log.info("Fetching call schedules for date: {}", date);
+        List<CallSchedule> schedules = callScheduleService.getCallSchedulesForDate(date);
+        return schedules.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok().body(schedules);
     }
 }

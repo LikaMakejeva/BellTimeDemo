@@ -13,5 +13,5 @@ public enum ScheduleType {
     /**
      * Special schedule for events or non-standard days
      */
-    SPECIAL
+    SPECIAL;
 }

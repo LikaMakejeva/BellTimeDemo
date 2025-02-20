@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.time.LocalTime;
 import java.util.Optional;
 
@@ -42,6 +43,13 @@ public class Lesson {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "schedule_id", nullable = false)
     private Schedule schedule;
+    
+    /** 
+     * Special schedule associated with this lesson.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "special_schedule_id", nullable = false)
+    private SpecialSchedule specialSchedule;
 
     /**
      * Associated call schedule for the lesson.
@@ -52,8 +60,9 @@ public class Lesson {
     /**
      * Duration of the lesson in minutes.
      */
+    @NotNull(message = "Duration cannot be null")
     @Column(nullable = false)
-    private int duration;
+    private Duration lessonDuration = Duration.ofMinutes(45);
 
     /**
      * Subject name in English.
@@ -80,6 +89,7 @@ public class Lesson {
         this.setOrderNumber(orderNumber);
         this.setSubjectEn(subjectEn);
         this.setSchedule(schedule);
+        this.lessonDuration = Duration.ofMinutes(45);
     }
 
     // ✅ Getters
@@ -119,15 +129,26 @@ public class Lesson {
     public CallSchedule getCallSchedule() {
         return callSchedule;
     }
+    /**
+     * Gets the associated special schedule.
+     *
+     * @return the special schedule.
+     */
+    public SpecialSchedule getSpecialSchedule() {
+        return specialSchedule;
+    }
 
     /**
      * Gets the duration of the lesson.
-     * If the associated schedule provides a positive lesson duration, that value is used.
+     * <p>
+     * If the associated schedule provides a non-null lesson duration, that value is used.
+     * Otherwise, the lesson's own duration is returned.
+     * </p>
      *
-     * @return duration in minutes.
+     * @return The duration of the lesson.
      */
-    public int getDuration() {
-        return (schedule != null && schedule.getLessonDuration() > 0) ? schedule.getLessonDuration() : duration;
+    public Duration getDuration() {
+        return (schedule != null && schedule.getLessonDuration() != null) ? schedule.getLessonDuration() : lessonDuration;
     }
 
     /**
@@ -139,17 +160,30 @@ public class Lesson {
         return subjectEn;
     }
     /**
-     * 🔥 **Добавленный метод**: Получение времени начала урока
-     * @return start time of the lesson.
-     * @throws IllegalStateException if the schedule is missing.
+     * Retrieves the start time of the lesson based on the schedule's first lesson start time 
+     * and the lesson's order within the schedule.
+     *
+     * <p>
+     * This method calculates the start time by adding the duration of previous lessons 
+     * (determined by the schedule) to the first lesson's start time.
+     * </p>
+     *
+     * @return The calculated start time of the lesson.
+     * @throws IllegalStateException if the schedule, first lesson start time, 
+     *         or lesson duration is missing.
      */
     public LocalTime getStartTime() {
-        if (schedule == null || schedule.getFirstLessonStart() == null) {
-            log.warn("Schedule or first lesson start time is missing for lesson ID {}", id);
+        if (schedule == null || schedule.getFirstLessonStart() == null || schedule.getLessonDuration() == null) {
+            log.warn("Schedule, first lesson start time, or lesson duration is missing for lesson ID {}", id);
             throw new IllegalStateException("Cannot determine start time: schedule is missing");
         }
-        return schedule.getFirstLessonStart().plusMinutes((long) (orderNumber - 1) * schedule.getLessonDuration());
+
+        // 🔥 Convert Duration to minutes
+        long lessonDurationInMinutes = schedule.getLessonDuration().toMinutes();
+
+        return schedule.getFirstLessonStart().plusMinutes((orderNumber - 1) * lessonDurationInMinutes);
     }
+
     // ✅ Setters
 
     public void setOrderNumber(int orderNumber) {
@@ -169,14 +203,23 @@ public class Lesson {
         log.debug("Setting schedule with ID: {}", schedule.getId());
         this.schedule = schedule;
     }
+    
+    public void setSpecialSchedule(SpecialSchedule specialSchedule) {
+        if (specialSchedule == null) {
+            log.error("Attempt to set null specialSchedule");
+            throw new IllegalArgumentException("SpecialSchedule cannot be null");
+        }
+        log.debug("Setting specialSchedule with ID: {}", specialSchedule.getId());
+        this.specialSchedule = specialSchedule;
+    }
 
-    public void setDuration(int duration) {
-        if (duration < 1) {
+    public void setDuration(Duration duration) {
+        if (duration == null || duration.isNegative() || duration.isZero()) {
             log.error("Attempt to set invalid duration: {}", duration);
             throw new IllegalArgumentException("Duration must be greater than 0");
         }
-        log.debug("Setting duration to {} minutes", duration);
-        this.duration = duration;
+        log.debug("Setting duration to {}", duration);
+        this.lessonDuration = duration;
     }
 
     public void setSubjectEn(String subject) {

@@ -13,12 +13,10 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
-import org.springframework.validation.ObjectError;
 
 /**
  * REST controller for managing holiday schedules.
- * Provides endpoints for CRUD operations on holiday schedules.
+ * Provides endpoints for creating, retrieving, updating, and deleting holiday schedules.
  */
 @RestController
 @RequestMapping("/api/holiday-schedules")
@@ -28,124 +26,161 @@ public class HolidayScheduleController {
     private static final Logger log = LoggerFactory.getLogger(HolidayScheduleController.class);
     private final HolidayScheduleService holidayScheduleService;
 
-    /**
-     * Constructor for dependency injection.
-     *
-     * @param holidayScheduleService the service for holiday schedule operations.
-     */
     public HolidayScheduleController(HolidayScheduleService holidayScheduleService) {
         this.holidayScheduleService = holidayScheduleService;
     }
 
     /**
-     * Retrieve a holiday schedule by its ID.
+     * GET /api/holiday-schedules : Retrieves all holiday schedules.
+     *
+     * @return ResponseEntity with a list of all holiday schedules.
+     */
+    @GetMapping
+    public ResponseEntity<List<HolidaySchedule>> getAllHolidaySchedules() {
+        log.info("Fetching all holiday schedules");
+        List<HolidaySchedule> schedules = holidayScheduleService.getAllHolidaySchedules();
+        return schedules.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(schedules);
+    }
+
+    /**
+     * GET /api/holiday-schedules/{id} : Retrieves a holiday schedule by ID.
      *
      * @param id the ID of the holiday schedule.
-     * @return ResponseEntity containing the holiday schedule.
+     * @return ResponseEntity with the found holiday schedule or 404 if not found.
      */
     @GetMapping("/{id}")
     public ResponseEntity<HolidaySchedule> getHolidayScheduleById(@PathVariable Long id) {
         log.info("Fetching holiday schedule with ID: {}", id);
-        HolidaySchedule schedule = holidayScheduleService.findById(id);
-        return ResponseEntity.ok(schedule);
+        try {
+            HolidaySchedule schedule = holidayScheduleService.getHolidayScheduleById(id);
+            return ResponseEntity.ok(schedule);
+        } catch (IllegalArgumentException e) {
+            log.warn("Holiday schedule not found for ID: {}", id);
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /**
-     * Retrieve a holiday schedule by its special date.
+     * GET /api/holiday-schedules/date/{date} : Retrieves a holiday schedule for a specific date.
      *
-     * @param date the special date (ISO format) of the holiday.
-     * @return ResponseEntity containing the holiday schedule.
+     * @param date the date for which the holiday schedule is requested.
+     * @return ResponseEntity with the found holiday schedule or 404 if not found.
      */
     @GetMapping("/date/{date}")
     public ResponseEntity<HolidaySchedule> getHolidayScheduleByDate(
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         log.info("Fetching holiday schedule for date: {}", date);
-        HolidaySchedule schedule = holidayScheduleService.findByHolidayDate(date);
-        return ResponseEntity.ok(schedule);
+        try {
+            HolidaySchedule schedule = holidayScheduleService.getHolidayScheduleByDate(date);
+            return ResponseEntity.ok(schedule);
+        } catch (IllegalArgumentException e) {
+            log.warn("No holiday schedule found for date: {}", date);
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /**
-     * Create a new holiday schedule.
+     * GET /api/holiday-schedules/date-range : Retrieves holiday schedules within a date range.
      *
-     * @param holidaySchedule the holiday schedule to create.
-     * @return ResponseEntity containing the created holiday schedule.
+     * @param startDate the start date (inclusive).
+     * @param endDate the end date (inclusive).
+     * @return ResponseEntity with a list of holiday schedules within the specified range.
+     */
+    @GetMapping("/date-range")
+    public ResponseEntity<List<HolidaySchedule>> getHolidaySchedulesForDateRange(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        log.info("Fetching holiday schedules between {} and {}", startDate, endDate);
+        List<HolidaySchedule> schedules = holidayScheduleService.getHolidayScheduleForDateRange(startDate, endDate);
+        return schedules.isEmpty() ? ResponseEntity.noContent().build() : ResponseEntity.ok(schedules);
+    }
+
+    /**
+     * POST /api/holiday-schedules : Creates a new holiday schedule.
+     *
+     * @param holidaySchedule the holiday schedule to be created.
+     * @return ResponseEntity with the created holiday schedule.
      */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<HolidaySchedule> createHolidaySchedule(@Valid @RequestBody HolidaySchedule holidaySchedule) {
         log.info("Creating holiday schedule: {}", holidaySchedule);
-        HolidaySchedule savedSchedule = holidayScheduleService.createHolidaySchedule(holidaySchedule);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedSchedule);
+        return ResponseEntity.status(HttpStatus.CREATED).body(holidayScheduleService.createHolidaySchedule(holidaySchedule));
     }
 
     /**
-     * Update an existing holiday schedule.
+     * PUT /api/holiday-schedules/{id} : Updates an existing holiday schedule.
      *
-     * @param holidaySchedule the holiday schedule with updated data.
-     * @return ResponseEntity containing the updated holiday schedule.
+     * @param id the ID of the holiday schedule to update.
+     * @param holidaySchedule the updated holiday schedule data.
+     * @return ResponseEntity with the updated holiday schedule.
      */
-    @PutMapping
-    public ResponseEntity<HolidaySchedule> updateHolidaySchedule(@Valid @RequestBody HolidaySchedule holidaySchedule) {
-        log.info("Updating holiday schedule: {}", holidaySchedule);
-        HolidaySchedule updatedSchedule = holidayScheduleService.updateHolidaySchedule(holidaySchedule);
-        return ResponseEntity.ok(updatedSchedule);
+    @PutMapping("/{id}")
+    public ResponseEntity<HolidaySchedule> updateHolidaySchedule(
+            @PathVariable Long id, @Valid @RequestBody HolidaySchedule holidaySchedule) {
+        log.info("Updating holiday schedule with ID: {}", id);
+        try {
+            HolidaySchedule updatedSchedule = holidayScheduleService.updateHolidaySchedule(id, holidaySchedule);
+            return ResponseEntity.ok(updatedSchedule);
+        } catch (IllegalArgumentException e) {
+            log.warn("Holiday schedule not found for ID: {}", id);
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /**
-     * Delete a holiday schedule by its ID.
+     * POST /api/holiday-schedules/save : Saves or updates a holiday schedule.
+     *
+     * @param holidaySchedule the holiday schedule to save or update.
+     * @return ResponseEntity with the saved holiday schedule.
+     */
+    @PostMapping("/save")
+    public ResponseEntity<HolidaySchedule> saveHolidaySchedule(@Valid @RequestBody HolidaySchedule holidaySchedule) {
+        log.info("Saving holiday schedule: {}", holidaySchedule);
+        return ResponseEntity.ok(holidayScheduleService.saveHolidaySchedule(holidaySchedule));
+    }
+
+    /**
+     * DELETE /api/holiday-schedules/{id} : Deletes a holiday schedule by ID.
      *
      * @param id the ID of the holiday schedule to delete.
-     * @return ResponseEntity with a success message.
+     * @return ResponseEntity with no content on success or 404 if not found.
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteHolidaySchedule(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteHolidaySchedule(@PathVariable Long id) {
         log.info("Deleting holiday schedule with ID: {}", id);
-        holidayScheduleService.delete(id);
-        String message = "Holiday schedule with ID " + id + " has been deleted.";
-        log.info(message);
-        return ResponseEntity.ok(message);
+        try {
+            holidayScheduleService.deleteHolidayScheduleById(id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Holiday schedule not found for ID: {}", id);
+            return ResponseEntity.notFound().build();
+        }
     }
 
     /**
-     * Retrieve all holiday schedules.
+     * GET /api/holiday-schedules/exists/{date} : Checks if a holiday schedule exists for a given date.
      *
-     * @return ResponseEntity containing a list of all holiday schedules.
+     * @param date the date to check.
+     * @return ResponseEntity with true if a holiday exists, false otherwise.
      */
-    @GetMapping
-    public ResponseEntity<List<HolidaySchedule>> getAllHolidaySchedules() {
-        log.info("Fetching all holiday schedules");
-        List<HolidaySchedule> schedules = holidayScheduleService.findAll();
-        log.info("Found {} holiday schedules", schedules.size());
-        return ResponseEntity.ok(schedules);
+    @GetMapping("/exists/{date}")
+    public ResponseEntity<Boolean> holidayExists(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        log.info("Checking if holiday schedule exists for date: {}", date);
+        return ResponseEntity.ok(holidayScheduleService.holidayExists(date));
     }
 
     /**
-     * Handles validation errors (ConstraintViolationException).
+     * GET /api/holiday-schedules/active/{date} : Checks if there is an active holiday for a given date.
      *
-     * @param ex the exception containing validation errors.
-     * @return ResponseEntity with a list of error messages and HTTP status BAD_REQUEST.
+     * @param date the date to check for an active holiday.
+     * @return ResponseEntity with true if an active holiday exists, false otherwise.
      */
-    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
-    public ResponseEntity<Object> handleValidationExceptions(jakarta.validation.ConstraintViolationException ex) {
-        List<String> errors = ex.getConstraintViolations().stream()
-                .map(violation -> violation.getMessage())
-                .collect(Collectors.toList());
-        log.warn("Validation error: {}", errors);
-        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
-    }
-
-    /**
-     * Handles method argument validation errors (MethodArgumentNotValidException).
-     *
-     * @param ex the exception containing method argument validation errors.
-     * @return ResponseEntity with a list of error messages and HTTP status BAD_REQUEST.
-     */
-    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
-    public ResponseEntity<Object> handleMethodArgumentNotValidException(org.springframework.web.bind.MethodArgumentNotValidException ex) {
-        List<String> errors = ex.getBindingResult().getAllErrors().stream()
-                .map(ObjectError::getDefaultMessage)
-                .collect(Collectors.toList());
-        log.warn("Method argument validation error: {}", errors);
-        return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
+    @GetMapping("/active/{date}")
+    public ResponseEntity<Boolean> hasActiveHoliday(
+            @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        log.info("Checking for active holiday on {}", date);
+        return ResponseEntity.ok(holidayScheduleService.hasActiveHoliday(date));
     }
 }

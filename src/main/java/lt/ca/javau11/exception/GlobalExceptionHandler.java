@@ -78,4 +78,26 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body("An unexpected error occurred");
     }
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<String> handleValidationException(ValidationException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+    /**
+     * Handles IllegalArgumentException when an invalid argument is provided.
+     * <p>
+     * This method catches any `IllegalArgumentException` thrown in the application,
+     * logs the error, and returns a 400 Bad Request response with the error message.
+     * </p>
+     *
+     * @param ex the IllegalArgumentException thrown during request processing.
+     * @return a ResponseEntity containing the error message and HTTP status 400 (Bad Request).
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Validation error: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+
+    
+
 }

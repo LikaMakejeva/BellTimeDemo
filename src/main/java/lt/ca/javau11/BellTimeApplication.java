@@ -19,16 +19,23 @@ import org.slf4j.LoggerFactory;
  *   <li>Break periods (Break entity and related components)</li>
  *   <li>Various enumerations (CallType, ScheduleType, DayOfWeek, etc.)</li>
  *   <li>Global exception handling for robust error management</li>
+ *   <li>Automated scheduling for managing periodic tasks</li>
  * </ul>
- * The application uses Spring Boot, Spring Data JPA, Bean Validation (Jakarta Validation), and scheduling.
- * </p>
+ * The application uses:
+ * <ul>
+ *   <li>Spring Boot</li>
+ *   <li>Spring Data JPA</li>
+ *   <li>Bean Validation (Jakarta Validation)</li>
+ *   <li>Scheduled Tasks with Spring Scheduling</li>
+ *   <li>SLF4J for structured logging</li>
+ * </ul>
  *
  * @author  
- * @version 1.0
+ * @version 1.1
  * @since 1.0
  */
 @SpringBootApplication
-@EnableScheduling  // Enables scheduling for tasks if needed
+@EnableScheduling  // Enables scheduling tasks for automated operations
 public class BellTimeApplication {
 
     private static final Logger log = LoggerFactory.getLogger(BellTimeApplication.class);
@@ -40,7 +47,13 @@ public class BellTimeApplication {
      */
     public static void main(String[] args) {
         log.info("Starting BellTimeApplication...");
-        SpringApplication.run(BellTimeApplication.class, args);
-        log.info("BellTimeApplication started successfully.");
+
+        try {
+            SpringApplication.run(BellTimeApplication.class, args);
+            log.info("BellTimeApplication started successfully.");
+        } catch (Exception e) {
+            log.error("Application failed to start due to an exception: {}", e.getMessage(), e);
+            System.exit(1);  // Terminate process with an error code if the startup fails
+        }
     }
 }

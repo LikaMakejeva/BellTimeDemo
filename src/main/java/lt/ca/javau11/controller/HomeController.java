@@ -21,4 +21,9 @@ public class HomeController {
         model.addAttribute("message", "Welcome to BellTime!");
         return "home"; 
     }
+    @GetMapping("/calendar")
+    public String calendar(Model model) {
+        model.addAttribute("pageTitle", "Schedule Calendar");
+        return "calendar";
+    }
 }

@@ -31,3 +31,14 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Logging
+logs/
+*.log
+
+# Исключаем временные файлы и конфиги
+database.sqlite
+src/main/resources/application-logging.properties
+src/main/resources/logback-spring.xml
+src/main/java/lt/ca/javau11/validation/
+

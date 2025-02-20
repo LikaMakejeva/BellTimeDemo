@@ -1,18 +1,36 @@
 package lt.ca.javau11.entity;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lt.ca.javau11.repository.SpecialScheduleRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lt.ca.javau11.repository.SpecialScheduleRepository;
 
 /**
  * Represents a school schedule that manages lesson timings, breaks, and special schedules.
@@ -32,6 +50,10 @@ public class Schedule {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    /** The name of the schedule, set by the user for custom schedules. */
+    @Size(max = 100, message = "Custom name cannot exceed 100 characters")
+    @Column(name = "custom_name", length = 100)
+    private String customName;
 
     /** The day of the week this schedule applies to. */
     @NotNull
@@ -54,14 +76,14 @@ public class Schedule {
     private List<Break> breaks = new ArrayList<>();
 
     /** Duration of a lesson in minutes. */
-    @Min(15) @Max(90)
+    @NotNull
     @Column(nullable = false)
-    private int lessonDuration = 45;
+    private Duration lessonDuration = Duration.ofMinutes(45);
 
     /** Duration of breaks in minutes. */
     @Min(5) @Max(30)
     @Column(nullable = false)
-    private int breakDuration = 10;
+    private Duration breakDuration = Duration.ofMinutes(10);
 
     /** Start time of the first lesson. */
     @NotNull
@@ -100,11 +122,18 @@ public class Schedule {
     public Schedule() {
         log.debug("Creating new Schedule instance");
     }
+    
+    
 
-    // ✅ Getters
+
+	// ✅ Getters
 
     public Long getId() {
         return id;
+    }
+    
+    public String getCustomName() {
+        return customName;
     }
 
     public DayOfWeek getDayOfWeek() {
@@ -123,11 +152,11 @@ public class Schedule {
         return breaks;
     }
 
-    public int getLessonDuration() {
+    public Duration getLessonDuration() {
         return lessonDuration;
     }
 
-    public int getBreakDuration() {
+    public Duration getBreakDuration() {
         return breakDuration;
     }
 
@@ -168,6 +197,14 @@ public class Schedule {
     public void setId(Long id) {
         this.id = id;
     }
+    public void setCustomName(String customName) {
+        if (customName != null && customName.length() > 100) {
+            log.error("Attempt to set too long custom name: {}", customName);
+            throw new IllegalArgumentException("Custom name cannot exceed 100 characters");
+        }
+        log.debug("Setting custom schedule name: {}", customName);
+        this.customName = customName;
+    }
 
     public void setDayOfWeek(DayOfWeek dayOfWeek) {
         this.dayOfWeek = dayOfWeek;
@@ -185,13 +222,30 @@ public class Schedule {
         this.breaks = breaks != null ? breaks : new ArrayList<>();
     }
 
-    public void setLessonDuration(int lessonDuration) {
+    public void setLessonDuration(Duration lessonDuration) {
+        if (lessonDuration == null || lessonDuration.isNegative() || lessonDuration.isZero()) {
+            log.error("Invalid lesson duration: {}", lessonDuration);
+            throw new IllegalArgumentException("Lesson duration must be greater than 0 minutes");
+        }
+        log.debug("Setting lesson duration to {}", lessonDuration);
         this.lessonDuration = lessonDuration;
     }
 
-    public void setBreakDuration(int breakDuration) {
+    /**
+     * Sets the duration of breaks in the schedule.
+     *
+     * @param breakDuration The duration of breaks.
+     * @throws IllegalArgumentException if the duration is null or negative.
+     */
+    public void setBreakDuration(Duration breakDuration) {
+        if (breakDuration == null || breakDuration.isNegative() || breakDuration.isZero()) {
+            log.error("Attempt to set invalid break duration: {}", breakDuration);
+            throw new IllegalArgumentException("Break duration must be a positive value.");
+        }
+        log.debug("Setting break duration to {}", breakDuration);
         this.breakDuration = breakDuration;
     }
+
 
     public void setFirstLessonStart(LocalTime firstLessonStart) {
         this.firstLessonStart = firstLessonStart;
@@ -235,8 +289,15 @@ public class Schedule {
      */
     public Schedule getScheduleForDate(LocalDate date, SpecialScheduleRepository specialScheduleRepository) {
         Optional<SpecialSchedule> specialScheduleOpt = specialScheduleRepository.findBySpecialDate(date);
-        return specialScheduleOpt.map(SpecialSchedule::getSchedule).orElse(this);
+        
+        if (specialScheduleOpt.isPresent()) {
+            return specialScheduleOpt.get().getSchedule();
+        } else {
+            return this;
+        }
     }
+
+
 
     /**
      * Automatically updates the last updated timestamp before saving or updating the schedule.

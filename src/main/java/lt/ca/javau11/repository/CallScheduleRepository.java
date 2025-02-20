@@ -2,55 +2,87 @@ package lt.ca.javau11.repository;
 
 import lt.ca.javau11.entity.CallSchedule;
 import lt.ca.javau11.entity.CallType;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
 import java.time.LocalTime;
 import java.util.List;
-import java.util.Optional;
 
 /**
- * Repository interface for accessing and manipulating CallSchedule entities.
- * Provides methods for querying the school bell schedule based on different criteria.
+ * Repository interface for managing CallSchedule entities.
+ * Provides methods to retrieve call schedules based on different criteria.
  */
 public interface CallScheduleRepository extends JpaRepository<CallSchedule, Long> {
 
     /**
-     * Finds all CallSchedule entities by the specified call type.
+     * Retrieves all call schedules along with their associated lesson and break period.
+     * Uses EntityGraph to fetch related entities in a single query.
      *
-     * @param callType the type of the call (e.g. lesson start, break, etc.).
-     * @return a list of CallSchedule entities that match the specified call type.
+     * @return List of CallSchedule entities with relationships eagerly loaded.
+     */
+    @Override
+    @EntityGraph(attributePaths = {"lesson", "breakPeriod"})
+    List<CallSchedule> findAll();
+
+    /**
+     * Finds a call schedule by its ID with eagerly loaded relationships.
+     *
+     * @param id The ID of the call schedule.
+     * @return The found CallSchedule entity with relationships eagerly loaded.
+     */
+    @EntityGraph(attributePaths = {"lesson", "breakPeriod"})
+    CallSchedule findById(long id);
+
+    /**
+     * Finds all call schedules of a specific type.
+     *
+     * @param callType The type of the call schedule.
+     * @return List of CallSchedule entities matching the specified type.
      */
     List<CallSchedule> findByCallType(CallType callType);
 
     /**
-     * Finds all CallSchedule entities where the call time is between the specified start and end times.
+     * Finds all call schedules that fall within a specific time range.
      *
-     * @param startTime the starting time of the period.
-     * @param endTime the ending time of the period.
-     * @return a list of CallSchedule entities that fall within the specified time range.
+     * @param startTime The start of the time range.
+     * @param endTime The end of the time range.
+     * @return List of CallSchedule entities within the time range.
      */
     List<CallSchedule> findByCallTimeBetween(LocalTime startTime, LocalTime endTime);
 
     /**
-     * Finds a CallSchedule entity by the associated lesson ID.
+     * Finds all call schedules associated with a specific break period.
      *
-     * @param lessonId the ID of the lesson.
-     * @return an Optional containing the found CallSchedule, or empty if not found.
+     * @param breakId The ID of the break period.
+     * @return List of CallSchedule entities associated with the given break.
      */
-    Optional<CallSchedule> findByLessonId(Long lessonId);
+    @Query("SELECT cs FROM CallSchedule cs WHERE cs.breakPeriod.id = :breakId")
+    List<CallSchedule> findByBreakPeriodId(@Param("breakId") Long breakId);
 
     /**
-     * Finds a CallSchedule entity by the associated break period ID.
+     * Finds all call schedules associated with a specific lesson.
      *
-     * @param breakId the ID of the break period.
-     * @return an Optional containing the found CallSchedule, or empty if not found.
+     * @param lessonId The ID of the lesson.
+     * @return List of CallSchedule entities associated with the given lesson.
      */
-    Optional<CallSchedule> findByBreakPeriodId(Long breakId);
+    @Query("SELECT cs FROM CallSchedule cs WHERE cs.lesson.id = :lessonId")
+    List<CallSchedule> findByLessonId(@Param("lessonId") Long lessonId);
 
     /**
-     * Finds all CallSchedule entities that are scheduled to ring at the specified time.
+     * Checks if a call schedule exists at a specific time.
      *
-     * @param callTime the exact time of the call (rounded to minutes).
-     * @return a list of CallSchedule entities matching the specified time.
+     * @param callTime The time to check.
+     * @return true if a schedule exists at the specified time, false otherwise.
      */
-    List<CallSchedule> findByCallTime(LocalTime callTime);
+    boolean existsByCallTime(LocalTime callTime);
+
+    /**
+    * Retrieves all call schedules associated with a specific schedule ID.
+    * 
+    * * @param id The ID of the schedule for which call schedules should be retrieved.
+    * @return An {@link Iterable} containing all call schedules associated with the given schedule ID.
+    */
+    List<CallSchedule> findByScheduleId(Long id);
 }

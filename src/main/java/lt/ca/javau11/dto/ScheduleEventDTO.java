@@ -1,6 +1,7 @@
 package lt.ca.javau11.dto;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * Data Transfer Object (DTO) representing a calendar event.
@@ -108,4 +109,24 @@ public class ScheduleEventDTO {
                 ", allDay=" + allDay +
                 '}';
     }
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(allDay, color, end, id, start, title);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		ScheduleEventDTO other = (ScheduleEventDTO) obj;
+		return allDay == other.allDay && Objects.equals(color, other.color) && Objects.equals(end, other.end)
+				&& Objects.equals(id, other.id) && Objects.equals(start, other.start)
+				&& Objects.equals(title, other.title);
+	}
+    
 }

@@ -51,6 +51,13 @@ public class CallSchedule {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "break_id")
     private Break breakPeriod;
+    
+    /**
+     * Associated Schedule .
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "schedule_id", nullable = false) 
+    private Schedule schedule;
 
     /**
      * Default constructor.
@@ -140,6 +147,17 @@ public class CallSchedule {
      */
     public void setId(Long id) {
         this.id = id;
+    }
+    /**
+     * Sets the associated schedule for this call schedule.
+     *
+     * @param schedule The schedule to be associated with this call schedule.
+     */
+    public void setSchedule(Schedule schedule) {
+        if (schedule == null) {
+            throw new IllegalArgumentException("Schedule cannot be null");
+        }
+        this.schedule = schedule;
     }
 
     /**
@@ -268,4 +286,6 @@ public class CallSchedule {
     public int hashCode() {
         return id != null ? id.hashCode() : 0;
     }
+
+	
 }
